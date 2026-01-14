@@ -1,20 +1,33 @@
-# backend/Dockerfile
-FROM node:22-alpine
+# File Server Dockerfile
+FROM node:18-alpine
+
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 # Set working directory
 WORKDIR /app
 
-# Copy package.json first (for caching)
+# Copy package files
 COPY package*.json tsconfig.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY src ./src
 
+# Create uploads directory
+RUN mkdir -p uploads
+
+# Build the application
+RUN npm run build
+
 # Expose port
 EXPOSE 3012
 
-# Run in dev mode
-CMD ["npm", "run", "dev"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3012/health || exit 1
+
+# Start the application
+CMD ["npm", "start"]
